@@ -4,6 +4,7 @@ from youtube_transcript_api.formatters import TextFormatter
 from dotenv import load_dotenv
 import os
 from groq import Groq
+from typing import Optional
 
 load_dotenv()
 
@@ -19,7 +20,7 @@ def get_transcript(video_id, languages):
         formatter = TextFormatter()
         transcript_res = YouTubeTranscriptApi.get_transcript(video_id, languages)
         transcript_formatted = formatter.format_transcript(transcript_res)
-        transcriptText = transcript_formatted.replace('\n',' ')
+        transcriptText = transcript_formatted.replace('\n', ' ')
         return transcriptText
     except Exception as e:
         return {"error": str(e)}
@@ -51,9 +52,9 @@ def get_home():
 
 @app.get('/summarized-data')
 def get_summarized_data(
-    yt_url: str
+    yt_url: str,
+    prompt: Optional[str] = "summarize the transcript in bullet"
 ):
-    prompt = "summarize the transcript in bullet"
     languages = ['en']
     video_id = get_video_id(yt_url)
     transcript = get_transcript(video_id, languages)
