@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 from groq import Groq
 from typing import Optional
+import re
 
 load_dotenv()
 
