@@ -12,7 +12,9 @@ app = FastAPI()
 
 
 def get_video_id(url):
-    return url.split('v=')[1]
+    regex = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+    match = re.search(regex, url)
+    return match.group(1) if match else None
 
 
 def get_transcript(video_id, languages):
