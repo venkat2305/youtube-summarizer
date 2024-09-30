@@ -20,8 +20,8 @@ def get_transcript(video_id, languages):
         formatter = TextFormatter()
         transcript_res = YouTubeTranscriptApi.get_transcript(video_id, languages)
         transcript_formatted = formatter.format_transcript(transcript_res)
-        transcriptText = transcript_formatted.replace('\n', ' ')
-        return transcriptText
+        transcript_text = transcript_formatted.replace('\n', ' ')
+        return transcript_text
     except Exception as e:
         return {"error": str(e)}
 
@@ -45,7 +45,6 @@ def get_ai_response(prompt, transcript):
     return chat_completion.choices[0].message.content
 
 
-
 @app.get('/')
 def get_home():
     return "Backend is UP"
@@ -59,3 +58,14 @@ def get_summarized_data(
     video_id = get_video_id(yt_url)
     transcript = get_transcript(video_id, languages)
     return get_ai_response(prompt, transcript)
+
+
+@app.get('/get-transcript')
+def get_youtube_transcript(yt_url: str):
+    video_id = get_video_id(yt_url)
+    transcript, language = get_transcript(video_id)
+    
+    if isinstance(transcript, dict) and "error" in transcript:
+        return transcript
+    else:
+        return {"transcript": transcript, "language": language}
