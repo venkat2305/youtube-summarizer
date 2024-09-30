@@ -61,11 +61,10 @@ def get_summarized_data(
 
 
 @app.get('/get-transcript')
-def get_youtube_transcript(yt_url: str):
+def get_youtube_transcript(
+    yt_url: str,
+):
+    languages = ['en']
     video_id = get_video_id(yt_url)
-    transcript, language = get_transcript(video_id)
-    
-    if isinstance(transcript, dict) and "error" in transcript:
-        return transcript
-    else:
-        return {"transcript": transcript, "language": language}
+    transcript = get_transcript(video_id, languages)
+    return transcript
