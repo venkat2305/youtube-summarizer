@@ -1,15 +1,54 @@
 from fastapi import FastAPI
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
 from youtube_transcript_api.formatters import TextFormatter
 from dotenv import load_dotenv
 import os
 from groq import Groq
 from typing import Optional
 import re
+from yt_dlp import YoutubeDL
 
 load_dotenv()
 
 app = FastAPI()
+
+
+def download_youtube_audio(video_url: str, output_path: str):
+    output_file = os.path.join(output_path, 'audio')
+    
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': output_file,
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+    }
+    
+    with YoutubeDL(ydl_opts) as ydl:
+        try:
+            print("downloading audio")
+            ydl.download([video_url])
+            print("Download completed")
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+
+
+def transcribe_audio(audio_filename):
+    print("getting ai transcription")
+    client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+    with open(audio_filename, "rb") as file:
+        transcription = client.audio.transcriptions.create(
+            file=(audio_filename, file.read()),
+            model="whisper-large-v3-turbo",
+            response_format="text",
+            language="en"
+        )
+    return transcription
 
 
 def get_video_id(url):
@@ -18,15 +57,31 @@ def get_video_id(url):
     return match.group(1) if match else None
 
 
-def get_transcript(video_id, languages):
+def get_transcript(yt_url):
+    video_id = get_video_id(yt_url)
+    formatter = TextFormatter()
     try:
-        formatter = TextFormatter()
-        transcript_res = YouTubeTranscriptApi.get_transcript(video_id, languages)
-        transcript_formatted = formatter.format_transcript(transcript_res)
-        transcript_text = transcript_formatted.replace('\n', ' ')
-        return transcript_text
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        
+        # Try to find an English transcript (manually created or auto-generated)
+        for transcript in transcript_list:
+            if transcript.language_code == 'en':
+                print("getting transcript with youtube transcript api")
+                transcript_data = transcript.fetch()
+                formatted_transcript = formatter.format_transcript(transcript_data)
+                return formatted_transcript
+
+        # If no English transcript found, translate one to English using groq whisper
+        download_youtube_audio(yt_url,'./')
+        transcript =  transcribe_audio('audio.mp3')
+        if os.path.exists('audio.mp3'):
+            os.remove('audio.mp3')
+        return transcript
+
+    except TranscriptsDisabled:
+        print("Transcripts are disabled for this video.")
     except Exception as e:
-        return {"error": str(e)}
+        print(f"An error occurred: {e}")
 
 
 def get_ai_response(prompt, transcript):
@@ -57,9 +112,7 @@ def get_summarized_data(
     yt_url: str,
     prompt: Optional[str] = "summarize the transcript in bullet"
 ):
-    languages = ['en']
-    video_id = get_video_id(yt_url)
-    transcript = get_transcript(video_id, languages)
+    transcript = get_transcript(yt_url)
     return get_ai_response(prompt, transcript)
 
 
@@ -67,7 +120,5 @@ def get_summarized_data(
 def get_youtube_transcript(
     yt_url: str,
 ):
-    languages = ['en']
-    video_id = get_video_id(yt_url)
-    transcript = get_transcript(video_id, languages)
+    transcript = get_transcript(yt_url)
     return transcript
