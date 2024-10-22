@@ -7,10 +7,25 @@ from groq import Groq
 from typing import Optional
 import re
 from yt_dlp import YoutubeDL
+import random
 
 load_dotenv()
 
 app = FastAPI()
+
+
+proxies = [
+    "http://tgmoukri:6vo3q1ns5bwp@198.23.239.134:6540",
+    "http://tgmoukri:6vo3q1ns5bwp@207.244.217.165:6712",
+    "http://tgmoukri:6vo3q1ns5bwp@107.172.163.27:6543",
+    "http://tgmoukri:6vo3q1ns5bwp@173.211.0.148:6641",
+    "http://tgmoukri:6vo3q1ns5bwp@161.123.152.115:6360",
+    "http://tgmoukri:6vo3q1ns5bwp@216.10.27.159:6837",
+    "http://tgmoukri:6vo3q1ns5bwp@167.160.180.203:6754",
+    "http://tgmoukri:6vo3q1ns5bwp@154.36.110.199:6853",
+    "http://tgmoukri:6vo3q1ns5bwp@173.0.9.70:5653",
+    "http://tgmoukri:6vo3q1ns5bwp@173.0.9.209:5792",
+]
 
 
 def download_youtube_audio(video_url: str, output_path: str):
@@ -60,16 +75,25 @@ def get_video_id(url):
 def get_transcript(yt_url):
     video_id = get_video_id(yt_url)
     formatter = TextFormatter()
+    selected_proxy = random.choice(proxies)
+    print(f"Using proxy: {selected_proxy}")
+
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         
-        # Try to find an English transcript (manually created or auto-generated)
-        for transcript in transcript_list:
-            if transcript.language_code == 'en':
-                print("getting transcript with youtube transcript api")
-                transcript_data = transcript.fetch()
-                formatted_transcript = formatter.format_transcript(transcript_data)
-                return formatted_transcript
+        proxy_dict = {
+        'http': selected_proxy,
+        'https': selected_proxy,
+        }
+        
+        # transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+        # # Try to find an English transcript (manually created or auto-generated)
+        # for transcript in transcript_list:
+        #     if transcript.language_code == 'en':
+        #         print("getting transcript with youtube transcript api")
+        #         transcript_data = transcript.fetch()
+        #         formatted_transcript = formatter.format_transcript(transcript_data)
+        #         return formatted_transcript
 
         # If no English transcript found, translate one to English using groq whisper
         download_youtube_audio(yt_url,'./')
@@ -80,8 +104,10 @@ def get_transcript(yt_url):
 
     except TranscriptsDisabled:
         print("Transcripts are disabled for this video.")
+        return "Transcripts are disabled for this video."
     except Exception as e:
         print(f"An error occurred: {e}")
+        return f"An error occurred: {e}"
 
 
 def get_ai_response(prompt, transcript):
