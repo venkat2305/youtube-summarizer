@@ -14,6 +14,9 @@ load_dotenv()
 
 app = FastAPI()
 
+selected_proxy = "socks4://45.82.13.227:1080"
+
+
 def fetch_proxies():
     # geonode.com
     url = "https://proxylist.geonode.com/api/proxy-list?protocols=socks4&limit=100&page=1&sort_by=lastChecked&sort_type=desc"
@@ -45,6 +48,7 @@ def download_youtube_audio(video_url: str, output_path: str):
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
+        'proxy': selected_proxy
     }
     
     with YoutubeDL(ydl_opts) as ydl:
@@ -79,7 +83,7 @@ def get_transcript(yt_url):
     video_id = get_video_id(yt_url)
     formatter = TextFormatter()
 
-    selected_proxy = "socks4://45.82.13.227:1080"
+    
     print(f"Using proxy: {selected_proxy}")
 
     try:
