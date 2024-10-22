@@ -8,24 +8,27 @@ from typing import Optional
 import re
 from yt_dlp import YoutubeDL
 import random
+import requests
 
 load_dotenv()
 
 app = FastAPI()
 
+def fetch_proxies():
+    # geonode.com
+    url = "https://proxylist.geonode.com/api/proxy-list?protocols=socks4&limit=100&page=1&sort_by=lastChecked&sort_type=desc"
+    response = requests.get(url)
+    proxies_data = response.json().get("data", [])
+    proxies = []
 
-proxies = [
-    "http://tgmoukri:6vo3q1ns5bwp@198.23.239.134:6540",
-    "http://tgmoukri:6vo3q1ns5bwp@207.244.217.165:6712",
-    "http://tgmoukri:6vo3q1ns5bwp@107.172.163.27:6543",
-    "http://tgmoukri:6vo3q1ns5bwp@173.211.0.148:6641",
-    "http://tgmoukri:6vo3q1ns5bwp@161.123.152.115:6360",
-    "http://tgmoukri:6vo3q1ns5bwp@216.10.27.159:6837",
-    "http://tgmoukri:6vo3q1ns5bwp@167.160.180.203:6754",
-    "http://tgmoukri:6vo3q1ns5bwp@154.36.110.199:6853",
-    "http://tgmoukri:6vo3q1ns5bwp@173.0.9.70:5653",
-    "http://tgmoukri:6vo3q1ns5bwp@173.0.9.209:5792",
-]
+    for proxy in proxies_data:
+        ip = proxy["ip"]
+        port = proxy["port"]
+        # Assuming HTTP/HTTPS proxy for YouTube Transcript API
+        formatted_proxy = f"http://{ip}:{port}"
+        proxies.append(formatted_proxy)
+
+    return proxies
 
 
 def download_youtube_audio(video_url: str, output_path: str):
@@ -75,7 +78,8 @@ def get_video_id(url):
 def get_transcript(yt_url):
     video_id = get_video_id(yt_url)
     formatter = TextFormatter()
-    selected_proxy = random.choice(proxies)
+
+    selected_proxy = "socks4://45.82.13.227:1080"
     print(f"Using proxy: {selected_proxy}")
 
     try:
@@ -85,15 +89,17 @@ def get_transcript(yt_url):
         'https': selected_proxy,
         }
         
-        # transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        print("starting to get transcript_list ")
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxy_dict)
+        # print("transcript_list", transcript_list)
 
-        # # Try to find an English transcript (manually created or auto-generated)
-        # for transcript in transcript_list:
-        #     if transcript.language_code == 'en':
-        #         print("getting transcript with youtube transcript api")
-        #         transcript_data = transcript.fetch()
-        #         formatted_transcript = formatter.format_transcript(transcript_data)
-        #         return formatted_transcript
+        # Try to find an English transcript (manually created or auto-generated)
+        for transcript in transcript_list:
+            if transcript.language_code == 'en':
+                print("getting transcript with youtube transcript api")
+                transcript_data = transcript.fetch()
+                formatted_transcript = formatter.format_transcript(transcript_data)
+                return formatted_transcript
 
         # If no English transcript found, translate one to English using groq whisper
         download_youtube_audio(yt_url,'./')
