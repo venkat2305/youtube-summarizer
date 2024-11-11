@@ -14,24 +14,13 @@ load_dotenv()
 
 app = FastAPI()
 
-selected_proxy = "socks4://45.82.13.227:1080"
+proxies = [
+    "socks4://45.82.13.227:1080",
+    "socks4://194.36.178.61:1080",
+]
 
+selected_proxy = random.choice(proxies)
 
-def fetch_proxies():
-    # geonode.com
-    url = "https://proxylist.geonode.com/api/proxy-list?protocols=socks4&limit=100&page=1&sort_by=lastChecked&sort_type=desc"
-    response = requests.get(url)
-    proxies_data = response.json().get("data", [])
-    proxies = []
-
-    for proxy in proxies_data:
-        ip = proxy["ip"]
-        port = proxy["port"]
-        # Assuming HTTP/HTTPS proxy for YouTube Transcript API
-        formatted_proxy = f"http://{ip}:{port}"
-        proxies.append(formatted_proxy)
-
-    return proxies
 
 
 def download_youtube_audio(video_url: str, output_path: str):
@@ -83,7 +72,6 @@ def get_transcript(yt_url):
     video_id = get_video_id(yt_url)
     formatter = TextFormatter()
 
-    
     print(f"Using proxy: {selected_proxy}")
 
     try:
